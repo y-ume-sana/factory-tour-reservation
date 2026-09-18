@@ -502,6 +502,40 @@
   const GAS_URL = "https://script.google.com/a/macros/yamashiroya.co.jp/s/AKfycbyit5dEdwm-ed4ZQmdaLKB2D2d2eQ27d8gWzkX5akWC_oESbs02eoOKOrAkeDai-Uqe/exec";
   // ▲ ここまで ▲
 
+  // GASのWebアプリはCORSヘッダーを返さないため、外部サイトからは fetch() が使えない。
+  // 代わりに <script> タグ経由でデータを受け取るJSONP方式を使う。
+  let jsonpCounter = 0;
+  function jsonpRequest(url, params) {
+    return new Promise((resolve, reject) => {
+      const callbackName = 'jsonpCallback_' + (jsonpCounter++) + '_' + Date.now();
+      const script = document.createElement('script');
+
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('タイムアウトしました'));
+      }, 15000);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[callbackName] = function (data) {
+        cleanup();
+        resolve(data);
+      };
+
+      const query = new URLSearchParams(Object.assign({}, params, { callback: callbackName })).toString();
+      script.src = url + '?' + query;
+      script.onerror = function () {
+        cleanup();
+        reject(new Error('通信エラーが発生しました'));
+      };
+      document.body.appendChild(script);
+    });
+  }
+
   const DOW = ["日", "月", "火", "水", "木", "金", "土"];
 
   const state = {
@@ -589,8 +623,7 @@
         return;
       }
 
-      const response = await fetch(GAS_URL);
-      const slots = await response.json();
+      const slots = await jsonpRequest(GAS_URL, {});
       state.slots = slots;
 
       loading.style.display = 'none';
@@ -678,13 +711,7 @@
         phone: el('phone').value.trim()
       };
 
-      const response = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
+      const result = await jsonpRequest(GAS_URL, Object.assign({ action: 'reserve' }, payload));
 
       if (result.success) {
         try {
@@ -699,8 +726,7 @@
       } else {
         showGlobalError(result.message || '予約に失敗しました。');
         // 満席の可能性があるため最新の空き状況を再取得してStep1に戻す
-        const refetch = await fetch(GAS_URL);
-        state.slots = await refetch.json();
+        state.slots = await jsonpRequest(GAS_URL, {});
         renderSlots();
         state.selected = null;
         el('toStep2').disabled = true;
