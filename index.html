@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>工場見学予約</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FAF6EF;
+    --card: #FFFFFF;
+    --ink: #2A2622;
+    --ink-muted: #7A7168;
+    --line: #E6DDCF;
+    --brass: #A8712E;
+    --brass-dark: #8A5D24;
+    --brass-tint: #F3E7D6;
+    --indigo: #232A3B;
+    --success: #4B7F52;
+    --success-tint: #E8F0E8;
+    --error: #B94A3E;
+    --error-tint: #FBEAE8;
+    --radius-card: 18px;
+    --radius-input: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 460px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* ---------- header ---------- */
+  header.hero {
+    background: var(--indigo);
+    color: #F5F1E8;
+    padding: 30px 24px 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  header.hero::after {
+    content: "";
+    position: absolute;
+    right: -30px;
+    top: -30px;
+    width: 140px;
+    height: 140px;
+    border: 1px solid rgba(245,241,232,0.12);
+    border-radius: 50%;
+  }
+  .hero-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .hero-mark svg { flex-shrink: 0; }
+  .hero-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--brass);
+    font-weight: 500;
+  }
+  h1.hero-title {
+    font-family: "Shippori Mincho", serif;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1.5;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .hero-sub {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(245,241,232,0.72);
+  }
+
+  /* ---------- step tracker ---------- */
+  .steps {
+    display: flex;
+    padding: 18px 24px 0;
+    gap: 6px;
+  }
+  .step-chip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .step-chip .bar {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+  .step-chip.done .bar,
+  .step-chip.active .bar { background: var(--brass); }
+  .step-chip .label {
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .step-chip.active .label { color: var(--brass-dark); font-weight: 700; }
+  .step-chip.done .label { color: var(--ink); }
+
+  /* ---------- main panel ---------- */
+  main { padding: 22px 20px 0; }
+
+  .panel { display: none; }
+  .panel.visible { display: block; animation: rise 0.35s ease; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-title {
+    font-family: "Shippori Mincho", serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 4px 0 4px;
+  }
+  .panel-desc {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 0 0 18px;
+    line-height: 1.7;
+  }
+
+  /* ---------- loading ---------- */
+  #loading {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto 14px;
+    border: 3px solid var(--line);
+    border-top-color: var(--brass);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #empty-state {
+    display: none;
+    padding: 50px 10px;
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  /* ---------- date/slot cards ---------- */
+  .date-group { margin-bottom: 16px; }
+  .date-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .date-heading .day {
+    font-family: "Shippori Mincho", serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .date-heading .dow {
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+
+  .slot-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .slot-option:active { background: var(--brass-tint); }
+  .slot-option.selected {
+    border-color: var(--brass);
+    background: var(--brass-tint);
+  }
+  .slot-option .slot-time {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .slot-option .slot-remain {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 3px;
+  }
+  .slot-option .slot-remain.low { color: var(--brass-dark); font-weight: 700; }
+  .slot-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .slot-option.selected .slot-radio {
+    border-color: var(--brass);
+  }
+  .slot-option.selected .slot-radio::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--brass);
+  }
+
+  /* ---------- form ---------- */
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 7px;
+  }
+  .field .hint {
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .field input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-input);
+    font-size: 16px;
+    font-family: inherit;
+    background: var(--card);
+    color: var(--ink);
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--brass);
+    box-shadow: 0 0 0 3px var(--brass-tint);
+  }
+  .field .error-msg {
+    display: none;
+    font-size: 12px;
+    color: var(--error);
+    margin-top: 6px;
+  }
+  .field.invalid input { border-color: var(--error); }
+  .field.invalid .error-msg { display: block; }
+
+  /* ---------- confirm panel ---------- */
+  .confirm-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .confirm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    gap: 16px;
+  }
+  .confirm-row:last-child { border-bottom: none; }
+  .confirm-row .k {
+    font-size: 12px;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  .confirm-row .v {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+  }
+  .confirm-note {
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.7;
+    background: var(--brass-tint);
+    border-radius: var(--radius-input);
+    padding: 12px 14px;
+    margin-bottom: 20px;
+  }
+
+  /* ---------- buttons ---------- */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: var(--radius-input);
+    padding: 15px;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-primary {
+    flex: 1;
+    background: var(--brass);
+    color: #fff;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:disabled {
+    background: var(--line);
+    color: var(--ink-muted);
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink-muted);
+    border: 1px solid var(--line);
+    padding: 15px 18px;
+  }
+
+  /* ---------- complete panel ---------- */
+  .complete-wrap {
+    text-align: center;
+    padding: 30px 6px 10px;
+  }
+  .complete-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: var(--success-tint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .complete-title {
+    font-family: "Shippori Mincho", serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 10px;
+  }
+  .complete-desc {
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.8;
+    margin: 0 0 24px;
+  }
+
+  #global-error {
+    display: none;
+    background: var(--error-tint);
+    color: var(--error);
+    border-radius: var(--radius-input);
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="hero">
+    <div class="hero-mark">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 22V13L11 17V13L18 17V13L26 8V22H4Z" stroke="#D9A759" stroke-width="1.6" stroke-linejoin="round"/>
+        <rect x="4" y="22" width="22" height="2.4" fill="#D9A759"/>
+      </svg>
+      <span class="hero-eyebrow">FACTORY TOUR</span>
+    </div>
+    <h1 class="hero-title">工場見学のご予約</h1>
+    <p class="hero-sub">見学枠を選び、必要事項をご入力いただくとご予約が完了します。ご来場をお待ちしております。</p>
+  </header>
+
+  <nav class="steps" id="stepTracker">
+    <div class="step-chip active" data-step="1"><div class="bar"></div><div class="label">枠を選ぶ</div></div>
+    <div class="step-chip" data-step="2"><div class="bar"></div><div class="label">情報を入力</div></div>
+    <div class="step-chip" data-step="3"><div class="bar"></div><div class="label">確認</div></div>
+    <div class="step-chip" data-step="4"><div class="bar"></div><div class="label">完了</div></div>
+  </nav>
+
+  <main>
+    <div id="global-error"></div>
+
+    <!-- Loading -->
+    <div id="loading">
+      <div class="spinner"></div>
+      空き状況を確認しています…
+    </div>
+
+    <div id="empty-state">
+      現在ご予約いただける見学枠がございません。<br>恐れ入りますが、後日改めてご確認ください。
+    </div>
+
+    <!-- Step 1: 枠選択 -->
+    <section class="panel" id="panel-1">
+      <p class="panel-title">ご希望の日時をお選びください</p>
+      <p class="panel-desc">残り枠数の少ない日程は先にお決めください。</p>
+      <div id="slotList"></div>
+      <div class="btn-row">
+        <button class="btn-primary" id="toStep2" disabled>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- Step 2: 情報入力 -->
+    <section class="panel" id="panel-2">
+      <p class="panel-title">見学者情報のご入力</p>
+      <p class="panel-desc">当日ご来場される代表者様の情報をご入力ください。</p>
+
+      <div class="field" id="field-name">
+        <label for="name">代表者氏名</label>
+        <input type="text" id="name" placeholder="例：山田 太郎" maxlength="50">
+        <div class="error-msg">氏名を入力してください。</div>
+      </div>
+
+      <div class="field" id="field-people">
+        <label for="people">見学人数 <span class="hint" id="peopleHint">(1〜10名)</span></label>
+        <input type="number" id="people" min="1" max="10" placeholder="例：2">
+        <div class="error-msg" id="peopleError">人数をご確認ください。</div>
+      </div>
+
+      <div class="field" id="field-phone">
+        <label for="phone">電話番号</label>
+        <input type="tel" id="phone" placeholder="例：09012345678">
+        <div class="error-msg">正しい電話番号を入力してください。</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" id="backTo1">戻る</button>
+        <button class="btn-primary" id="toStep3">確認へ進む</button>
+      </div>
+    </section>
+
+    <!-- Step 3: 確認 -->
+    <section class="panel" id="panel-3">
+      <p class="panel-title">内容をご確認ください</p>
+      <p class="panel-desc">この内容で予約を確定します。</p>
+
+      <div class="confirm-card">
+        <div class="confirm-row"><span class="k">見学日</span><span class="v" id="cfDate"></span></div>
+        <div class="confirm-row"><span class="k">時間帯</span><span class="v" id="cfTime"></span></div>
+        <div class="confirm-row"><span class="k">代表者氏名</span><span class="v" id="cfName"></span></div>
+        <div class="confirm-row"><span class="k">見学人数</span><span class="v" id="cfPeople"></span></div>
+        <div class="confirm-row"><span class="k">電話番号</span><span class="v" id="cfPhone"></span></div>
+      </div>
+
+      <p class="confirm-note">ご入力いただいた電話番号は、当日の緊急連絡のみに使用いたします。予約完了後、LINEトークにも予約内容が自動送信されます。</p>
+
+      <div class="btn-row">
+        <button class="btn-secondary" id="backTo2">戻る</button>
+        <button class="btn-primary" id="submitBtn">予約を確定する</button>
+      </div>
+    </section>
+
+    <!-- Step 4: 完了 -->
+    <section class="panel" id="panel-4">
+      <div class="complete-wrap">
+        <div class="complete-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12.5L9.5 18L20 6" stroke="#4B7F52" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p class="complete-title">ご予約が完了しました</p>
+        <p class="complete-desc">予約内容はLINEトークにも送信しました。<br>当日は開始時刻の10分前を目安にお越しください。</p>
+        <button class="btn-primary" id="closeBtn" style="width:100%;">閉じる</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<script>
+  // ▼ ここを書き換えてください ▼
+  const LIFF_ID = "2011298555-ZL3AHgZU";
+  const GAS_URL = "https://script.google.com/a/macros/yamashiroya.co.jp/s/AKfycbyit5dEdwm-ed4ZQmdaLKB2D2d2eQ27d8gWzkX5akWC_oESbs02eoOKOrAkeDai-Uqe/exec";
+  // ▲ ここまで ▲
+
+  const DOW = ["日", "月", "火", "水", "木", "金", "土"];
+
+  const state = {
+    slots: [],
+    selected: null // { date, time, remainGroups, remainPeople }
+  };
+
+  const el = (id) => document.getElementById(id);
+  const loading = el('loading');
+  const emptyState = el('empty-state');
+  const globalError = el('global-error');
+
+  function showGlobalError(msg) {
+    globalError.textContent = msg;
+    globalError.style.display = 'block';
+  }
+
+  function setStep(n) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+    el('panel-' + n).classList.add('visible');
+    document.querySelectorAll('.step-chip').forEach(chip => {
+      const s = parseInt(chip.dataset.step, 10);
+      chip.classList.toggle('done', s < n);
+      chip.classList.toggle('active', s === n);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- Step 1: build slot list ----------
+  function renderSlots() {
+    const listEl = el('slotList');
+    listEl.innerHTML = '';
+
+    const byDate = {};
+    state.slots.forEach(s => {
+      if (!byDate[s.date]) byDate[s.date] = [];
+      byDate[s.date].push(s);
+    });
+
+    Object.keys(byDate).forEach(date => {
+      const group = document.createElement('div');
+      group.className = 'date-group';
+
+      const d = new Date(date.replace(/\//g, '/'));
+      const dow = isNaN(d.getDay()) ? '' : DOW[d.getDay()];
+      const [y, m, day] = date.split('/');
+
+      const heading = document.createElement('div');
+      heading.className = 'date-heading';
+      heading.innerHTML = `<span class="day">${m}月${day}日</span><span class="dow">(${dow})・${y}年</span>`;
+      group.appendChild(heading);
+
+      byDate[date].forEach(slot => {
+        const opt = document.createElement('div');
+        opt.className = 'slot-option';
+        const low = slot.remainPeople <= 2;
+        opt.innerHTML = `
+          <div>
+            <div class="slot-time">${slot.time}</div>
+            <div class="slot-remain ${low ? 'low' : ''}">残り ${slot.remainGroups}組 / ${slot.remainPeople}名${low ? '（残りわずか）' : ''}</div>
+          </div>
+          <div class="slot-radio"></div>
+        `;
+        opt.addEventListener('click', () => {
+          document.querySelectorAll('.slot-option').forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          state.selected = slot;
+          el('toStep2').disabled = false;
+          el('peopleHint').textContent = `(1〜${Math.min(10, slot.remainPeople)}名)`;
+        });
+        group.appendChild(opt);
+      });
+
+      listEl.appendChild(group);
+    });
+  }
+
+  // ---------- init ----------
+  async function initializeApp() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      const response = await fetch(GAS_URL);
+      const slots = await response.json();
+      state.slots = slots;
+
+      loading.style.display = 'none';
+
+      if (!slots.length) {
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      renderSlots();
+      setStep(1);
+
+    } catch (error) {
+      loading.style.display = 'none';
+      showGlobalError('読み込みに失敗しました。画面を開き直してお試しください。');
+      console.error(error);
+    }
+  }
+
+  // ---------- step navigation ----------
+  el('toStep2').addEventListener('click', () => setStep(2));
+  el('backTo1').addEventListener('click', () => setStep(1));
+  el('backTo2').addEventListener('click', () => setStep(2));
+
+  function clearFieldError(fieldId) {
+    el(fieldId).classList.remove('invalid');
+  }
+
+  function setFieldError(fieldId) {
+    el(fieldId).classList.add('invalid');
+  }
+
+  function validatePhone(phone) {
+    const digits = phone.replace(/-/g, '');
+    return /^0\d{9,10}$/.test(digits);
+  }
+
+  el('toStep3').addEventListener('click', () => {
+    let valid = true;
+    const name = el('name').value.trim();
+    const peopleRaw = el('people').value;
+    const people = parseInt(peopleRaw, 10);
+    const phone = el('phone').value.trim();
+    const maxPeople = state.selected ? Math.min(10, state.selected.remainPeople) : 10;
+
+    if (!name) {
+      setFieldError('field-name'); valid = false;
+    } else clearFieldError('field-name');
+
+    if (isNaN(people) || people < 1 || people > maxPeople) {
+      el('peopleError').textContent = `人数は1〜${maxPeople}名の範囲で入力してください。`;
+      setFieldError('field-people'); valid = false;
+    } else clearFieldError('field-people');
+
+    if (!validatePhone(phone)) {
+      setFieldError('field-phone'); valid = false;
+    } else clearFieldError('field-phone');
+
+    if (!valid) return;
+
+    el('cfDate').textContent = state.selected.date;
+    el('cfTime').textContent = state.selected.time;
+    el('cfName').textContent = name;
+    el('cfPeople').textContent = people + ' 名';
+    el('cfPhone').textContent = phone;
+
+    setStep(3);
+  });
+
+  // ---------- submit ----------
+  el('submitBtn').addEventListener('click', async () => {
+    const btn = el('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '送信中…';
+    globalError.style.display = 'none';
+
+    try {
+      const token = liff.getAccessToken();
+      const payload = {
+        token: token,
+        date: state.selected.date,
+        time: state.selected.time,
+        name: el('name').value.trim(),
+        people: el('people').value,
+        phone: el('phone').value.trim()
+      };
+
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        try {
+          await liff.sendMessages([{
+            type: 'text',
+            text: `【工場見学予約完了】\n${payload.date} ${payload.time}\n${payload.name}様 ${payload.people}名`
+          }]);
+        } catch (msgErr) {
+          console.error('LINE通知の送信に失敗しました', msgErr);
+        }
+        setStep(4);
+      } else {
+        showGlobalError(result.message || '予約に失敗しました。');
+        // 満席の可能性があるため最新の空き状況を再取得してStep1に戻す
+        const refetch = await fetch(GAS_URL);
+        state.slots = await refetch.json();
+        renderSlots();
+        state.selected = null;
+        el('toStep2').disabled = true;
+        setStep(1);
+      }
+    } catch (error) {
+      showGlobalError('通信エラーが発生しました。再度お試しください。');
+      console.error(error);
+      setStep(3);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '予約を確定する';
+    }
+  });
+
+  el('closeBtn').addEventListener('click', () => {
+    if (liff.isInClient()) {
+      liff.closeWindow();
+    }
+  });
+
+  window.addEventListener('DOMContentLoaded', initializeApp);
+</script>
+</body>
+</html>
